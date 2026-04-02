@@ -1,12 +1,14 @@
 package com.joyson.ai_life_tracker.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import com.joyson.ai_life_tracker.entity.DailyLog;
 import com.joyson.ai_life_tracker.service.DailyLogService;
-
+import com.joyson.ai_life_tracker.service.PdfService;
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/daily")
 public class DailyLogController {
@@ -14,13 +16,36 @@ public class DailyLogController {
     @Autowired
     private DailyLogService dailyLogService;
 
-    @PostMapping
-    public DailyLog createLog(@RequestBody DailyLog log) {
-        return dailyLogService.saveLog(log);
+    // 🔥 Create log for specific user
+    @PostMapping("/{userId}")
+    public DailyLog createLog(@PathVariable Long userId, @RequestBody DailyLog log) {
+        return dailyLogService.saveLog(userId, log);
     }
 
+    // 🔥 Get all logs (admin/testing purpose)
     @GetMapping
     public List<DailyLog> getLogs() {
         return dailyLogService.getAllLogs();
+    }
+
+    // 🔥 NEW: Get logs by user
+    @GetMapping("/user/{userId}")
+    public List<DailyLog> getUserLogs(@PathVariable Long userId) {
+        return dailyLogService.getLogsByUser(userId);
+    }
+    @Autowired
+    private PdfService pdfService;
+
+    @GetMapping("/pdf/{logId}")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long logId) {
+
+        DailyLog log = dailyLogService.getLogById(logId);
+
+        byte[] pdf = pdfService.generatePdf(log);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=report.pdf")
+                .header("Content-Type", "application/pdf")
+                .body(pdf);
     }
 }

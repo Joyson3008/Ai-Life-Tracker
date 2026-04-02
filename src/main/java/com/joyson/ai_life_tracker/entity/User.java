@@ -1,14 +1,9 @@
 package com.joyson.ai_life_tracker.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class User {
 
     @Id
@@ -16,14 +11,39 @@ public class User {
     private Long id;
 
     private String name;
-
-    @Column(unique = true)
     private String email;
-
     private String password;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
-    public Long getId() { return id; }
-    public String getName() { return name; }
-    public String getEmail() { return email; }
-    public String getPassword() { return password; }}
+    // 🔥 REQUIRED: DEFAULT CONSTRUCTOR
+    public User() {}
+
+    // 🔥 GETTERS & SETTERS
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {   // ✅ MUST EXIST
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) { // ✅ MUST EXIST
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) { // 🚨 THIS IS YOUR ISSUE
+        this.password = password;
+    }
+}
