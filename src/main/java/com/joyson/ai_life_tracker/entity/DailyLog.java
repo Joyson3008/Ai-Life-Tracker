@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "daily_logs")
 public class DailyLog {
@@ -70,9 +72,10 @@ public class DailyLog {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // 🔗 Relationship with User
+
     @ManyToOne
     @JoinColumn(name = "user_id")
+    //@JsonIgnore  
     private User user;
 
     // =====================

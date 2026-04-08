@@ -4,13 +4,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.time.LocalDate;
 
 import com.joyson.ai_life_tracker.dto.AIResponse;
 import com.joyson.ai_life_tracker.entity.DailyLog;
 import com.joyson.ai_life_tracker.entity.User;
 import com.joyson.ai_life_tracker.repository.DailyLogRepository;
 import com.joyson.ai_life_tracker.repository.UserRepository;
-import java.time.LocalDate;
+
 @Service
 public class DailyLogService {
 
@@ -23,7 +24,7 @@ public class DailyLogService {
     @Autowired
     private UserRepository userRepository;
 
-    // 🔥 SAVE LOG WITH USER
+    // 🔥 SAVE LOG WITH HYBRID SCORING
     public DailyLog saveLog(Long userId, DailyLog log) {
 
         // ✅ Step 1: Fetch user
@@ -33,7 +34,7 @@ public class DailyLogService {
         // ✅ Step 2: Set user
         log.setUser(user);
 
-        // 🔥 Step 3: Prepare text
+        // 🔥 Step 3: Prepare text for AI
         String text =
                 "Bible Reading: " + log.getBibleReading() + "\n" +
                 "Book Reading: " + log.getBookReading() + "\n" +
@@ -48,9 +49,14 @@ public class DailyLogService {
         // 🔥 Step 4: AI call
         AIResponse aiResponse = aiService.analyzeText(text);
 
-        // 🔥 Step 5: Map AI → Entity
-        log.setScore(aiResponse.getScore());
+        // 🔥 Step 5: HYBRID SCORING
+        int aiScore = aiResponse.getScore();
+        int systemScore = calculateScore(log);
 
+        int finalScore = (aiScore + systemScore) / 2;
+        log.setScore(finalScore);
+
+        // 🔥 Step 6: Map AI → Entity
         log.setBibleReview(aiResponse.getBibleReview());
         log.setBookReview(aiResponse.getBookReview());
         log.setCodingReview(aiResponse.getCodingReview());
@@ -65,10 +71,55 @@ public class DailyLogService {
         log.setFinalSummary(aiResponse.getFinalSummary());
         log.setMotivation(aiResponse.getMotivation());
 
-log.setDate(LocalDate.now());
+        log.setDate(LocalDate.now());
 
-        // 🔥 Step 6: Save
+        // 🔥 Step 7: Save
         return dailyLogRepository.save(log);
+    }
+
+    private int calculateScore(DailyLog log) {
+
+        int score = 5; // base score
+
+        // 📖 Learning
+        if (log.getBibleReading() != null && !log.getBibleReading().isEmpty()) score += 1;
+        if (log.getBookReading() != null && !log.getBookReading().isEmpty()) score += 1;
+        if (log.getCsTopic() != null && !log.getCsTopic().isEmpty()) score += 1;
+
+        // 💻 Productivity
+        if (log.getCodingWork() != null && !log.getCodingWork().isEmpty()) score += 2;
+
+        // 🎓 College
+        if (log.getCollegeActivity() != null && !log.getCollegeActivity().isEmpty()) score += 1;
+
+        // 🧠 Reflection
+        if (log.getDiary() != null && !log.getDiary().isEmpty()) score += 1;
+
+        // 📱 Phone usage (String → int)
+        if (log.getPhoneUsage() != null && !log.getPhoneUsage().isEmpty()) {
+            try {
+                int phoneUsage = Integer.parseInt(log.getPhoneUsage());
+
+                if (phoneUsage > 180) score -= 2;
+                else if (phoneUsage > 100) score -= 1;
+
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        // 💰 Expenses (Double → direct use)
+        if (log.getExpenses() != null) {
+            if (log.getExpenses() > 500) {
+                score -= 1;
+            }
+        }
+
+        // 🔒 Clamp
+        if (score > 10) score = 10;
+        if (score < 1) score = 1;
+
+        return score;
     }
 
     // ✅ Get all logs
@@ -76,11 +127,12 @@ log.setDate(LocalDate.now());
         return dailyLogRepository.findAll();
     }
 
-    // 🔥 NEW METHOD (THIS FIXES YOUR ERROR)
+    // ✅ Get logs by user
     public List<DailyLog> getLogsByUser(Long userId) {
         return dailyLogRepository.findByUserId(userId);
     }
 
+    // ✅ Get log by ID
     public DailyLog getLogById(Long id) {
         return dailyLogRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Log not found"));

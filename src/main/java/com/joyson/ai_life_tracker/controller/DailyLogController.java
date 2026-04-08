@@ -8,10 +8,11 @@ import java.util.List;
 import com.joyson.ai_life_tracker.entity.DailyLog;
 import com.joyson.ai_life_tracker.service.DailyLogService;
 import com.joyson.ai_life_tracker.service.PdfService;
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/daily")
+@CrossOrigin(origins = "http://localhost:5173")
 public class DailyLogController {
+
 
     @Autowired
     private DailyLogService dailyLogService;
