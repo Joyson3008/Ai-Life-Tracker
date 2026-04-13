@@ -7,28 +7,27 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class SecurityConfig {
-	@Bean
-	public BCryptPasswordEncoder passwordEncoder() {
-	    return new BCryptPasswordEncoder();
-	}
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            // ❌ Disable CSRF (for React frontend)
             .csrf(csrf -> csrf.disable())
 
-            // 🔥 Allow API access
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/**").permitAll() // ✅ simpler & safer
+                .requestMatchers("/health").permitAll()   // ✅ ADD THIS
+                .requestMatchers("/api/**").permitAll()
                 .anyRequest().authenticated()
             )
 
-            // ❌ Disable default login popup (IMPORTANT)
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable());
 
