@@ -6,69 +6,67 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import com.joyson.ai_life_tracker.entity.DailyLog;
-import com.joyson.ai_life_tracker.entity.User;
-import com.joyson.ai_life_tracker.repository.UserRepository;
 import com.joyson.ai_life_tracker.service.DailyLogService;
 import com.joyson.ai_life_tracker.service.PdfService;
 
 @RestController
 @RequestMapping("/api/daily")
-@CrossOrigin(origins = "*") // 🔥 allow deployed frontend
 public class DailyLogController {
 
     @Autowired
     private DailyLogService dailyLogService;
 
     @Autowired
-    private UserRepository userRepository; // ✅ ADD THIS
+    private PdfService pdfService;
 
-    // 🔥 CREATE LOG (FIXED)
+    // 🔥 CREATE LOG (FINAL CLEAN VERSION)
     @PostMapping("/{userId}")
     public ResponseEntity<?> createLog(@PathVariable Long userId, @RequestBody DailyLog log) {
         try {
-            // ✅ GET USER
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            // ✅ SET USER (MOST IMPORTANT FIX)
-            log.setUser(user);
-
-            // ✅ SAVE
             DailyLog savedLog = dailyLogService.saveLog(userId, log);
-
             return ResponseEntity.ok(savedLog);
 
         } catch (Exception e) {
-            e.printStackTrace(); // 🔥 shows error in Render logs
+            e.printStackTrace(); // 🔥 VERY IMPORTANT (check Render logs)
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
 
     // 🔥 GET ALL LOGS
     @GetMapping
-    public List<DailyLog> getLogs() {
-        return dailyLogService.getAllLogs();
+    public ResponseEntity<?> getLogs() {
+        try {
+            return ResponseEntity.ok(dailyLogService.getAllLogs());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching logs");
+        }
     }
 
     // 🔥 GET USER LOGS
     @GetMapping("/user/{userId}")
-    public List<DailyLog> getUserLogs(@PathVariable Long userId) {
-        return dailyLogService.getLogsByUser(userId);
+    public ResponseEntity<?> getUserLogs(@PathVariable Long userId) {
+        try {
+            return ResponseEntity.ok(dailyLogService.getLogsByUser(userId));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching user logs");
+        }
     }
-
-    @Autowired
-    private PdfService pdfService;
 
     // 🔥 DOWNLOAD PDF
     @GetMapping("/pdf/{logId}")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable Long logId) {
+        try {
+            DailyLog log = dailyLogService.getLogById(logId);
+            byte[] pdf = pdfService.generatePdf(log);
 
-        DailyLog log = dailyLogService.getLogById(logId);
-        byte[] pdf = pdfService.generatePdf(log);
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=report.pdf")
+                    .header("Content-Type", "application/pdf")
+                    .body(pdf);
 
-        return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=report.pdf")
-                .header("Content-Type", "application/pdf")
-                .body(pdf);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
