@@ -12,7 +12,7 @@ import com.joyson.ai_life_tracker.service.UserService;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
+// ❌ REMOVE @CrossOrigin (handled globally now)
 public class UserController {
 
     @Autowired
@@ -20,20 +20,40 @@ public class UserController {
 
     // ✅ REGISTER
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.saveUser(user);
+    public ResponseEntity<?> createUser(@RequestBody User user) {
+        try {
+            User savedUser = userService.saveUser(user);
+            return ResponseEntity.ok(savedUser);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error creating user: " + e.getMessage());
+        }
     }
 
     // ✅ GET USERS
     @GetMapping
-    public List<User> getUsers() {
-        return userService.getAllUsers();
+    public ResponseEntity<?> getUsers() {
+        try {
+            return ResponseEntity.ok(userService.getAllUsers());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching users");
+        }
     }
 
-    // ✅ LOGIN (WORKING)
+    // ✅ LOGIN
     @PostMapping("/login")
-    public User login(@RequestBody User user) {
-        return userService.login(user.getEmail(), user.getPassword());
+    public ResponseEntity<?> login(@RequestBody User user) {
+        try {
+            User loggedInUser = userService.login(user.getEmail(), user.getPassword());
+
+            if (loggedInUser == null) {
+                return ResponseEntity.status(401).body("❌ Invalid email or password");
+            }
+
+            return ResponseEntity.ok(loggedInUser);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Login error: " + e.getMessage());
+        }
     }
 
     // 🔥 CHANGE PASSWORD
@@ -42,22 +62,31 @@ public class UserController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
 
-        String currentPassword = body.get("currentPassword");
-        String newPassword = body.get("newPassword");
+        try {
+            String currentPassword = body.get("currentPassword");
+            String newPassword = body.get("newPassword");
 
-        boolean updated = userService.changePassword(id, currentPassword, newPassword);
+            boolean updated = userService.changePassword(id, currentPassword, newPassword);
 
-        if (!updated) {
-            return ResponseEntity.badRequest().body("❌ Current password is incorrect");
+            if (!updated) {
+                return ResponseEntity.badRequest().body("❌ Current password is incorrect");
+            }
+
+            return ResponseEntity.ok("✅ Password updated successfully");
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error updating password");
         }
-
-        return ResponseEntity.ok("✅ Password updated successfully");
     }
 
     // 🔥 DELETE ACCOUNT
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        userService.deleteUser(id);
-        return ResponseEntity.ok("✅ User deleted successfully");
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.ok("✅ User deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error deleting user");
+        }
     }
 }
