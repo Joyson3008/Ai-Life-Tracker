@@ -24,11 +24,9 @@ public class AIService {
         RestTemplate restTemplate = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + apiKey);
+        headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
-
-        // ✅ COMPACT PROMPT — avoids truncation by keeping output short
-        String prompt =
+   String prompt =
             "Analyze this daily log and return ONLY a valid JSON object. No extra text.\n\n" +
             "Daily Log:\n" + text + "\n\n" +
             "Rules:\n" +
@@ -69,19 +67,17 @@ public class AIService {
         	    "  \"motivation\": \"2-3 powerful realistic lines\"\n" +
         	    "}";
 
-
+        // 🔥 REQUEST BODY
         Map<String, Object> body = new HashMap<>();
         body.put("model", "llama-3.1-8b-instant");
         body.put("temperature", 0.3);
-        body.put("max_tokens", 1200); // ✅ Reduced — 1200 is enough for short reviews
+        body.put("max_tokens", 800);
 
         List<Map<String, String>> messages = new ArrayList<>();
 
         Map<String, String> systemMsg = new HashMap<>();
         systemMsg.put("role", "system");
-        systemMsg.put("content",
-            "You are a JSON-only API. Return valid, complete JSON with no extra text, no markdown, no explanation. " +
-            "Always close every JSON object with }. Keep all string values concise (2-3 sentences max).");
+        systemMsg.put("content", "You are a JSON-only API. Return only valid JSON.");
 
         Map<String, String> userMsg = new HashMap<>();
         userMsg.put("role", "user");
@@ -94,75 +90,69 @@ public class AIService {
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, request, Map.class);
+        ResponseEntity<Map> response;
+
+        // 🔥 SAFE API CALL
+        try {
+            response = restTemplate.postForEntity(apiUrl, request, Map.class);
+        } catch (Exception e) {
+            System.out.println("❌ API CALL FAILED: " + e.getMessage());
+
+            return fallback("AI service unreachable.");
+        }
 
         Map responseBody = response.getBody();
+
+        System.out.println("🔥 RAW API RESPONSE: " + responseBody);
+
+        // 🔥 VALIDATION
+        if (responseBody == null || !responseBody.containsKey("choices")) {
+            return fallback("Invalid AI response.");
+        }
+
         List choices = (List) responseBody.get("choices");
+
+        if (choices == null || choices.isEmpty()) {
+            return fallback("Empty AI response.");
+        }
+
         Map firstChoice = (Map) choices.get(0);
         Map message = (Map) firstChoice.get("message");
 
+        if (message == null || !message.containsKey("content")) {
+            return fallback("Missing AI content.");
+        }
+
         String aiText = (String) message.get("content");
 
-        // 🧼 Strip markdown fences
-     // 🧼 CLEAN RESPONSE (FINAL FIX)
+        // 🧼 CLEAN RESPONSE
         aiText = aiText.replace("```json", "")
                        .replace("```", "")
                        .trim();
 
-        // 🔥 FIX score string → number
-   
-
-        System.out.println("===== FINAL CLEANED AI RESPONSE =====");
+        System.out.println("===== CLEANED AI RESPONSE =====");
         System.out.println(aiText);
-        System.out.println("====================================");
-
-        // 🔧 REPAIR truncated JSON before parsing
-        if (!aiText.endsWith("}")) {
-            System.out.println("⚠️ JSON appears truncated — attempting repair...");
-            int lastComma = aiText.lastIndexOf(",");
-            int lastClosingBrace = aiText.lastIndexOf("}");
-
-            if (lastComma > lastClosingBrace) {
-                // Remove the trailing incomplete field and close the object
-                aiText = aiText.substring(0, lastComma) + "\n}";
-            } else if (!aiText.endsWith("}")) {
-                // Try naively closing a hanging string value
-                if (aiText.endsWith("\"")) {
-                    aiText = aiText + "}";
-                } else {
-                    aiText = aiText + "\"}";
-                }
-            }
-            System.out.println("🔧 Repaired JSON:");
-            System.out.println(aiText);
-        }
 
         try {
-            if (!aiText.startsWith("{")) {
-                System.out.println("⚠️ Response does not start with { — invalid JSON");
-                AIResponse fallback = new AIResponse();
-                fallback.setFinalSummary("AI response was invalid. Please try again.");
-                fallback.setScore(5);
-                return fallback;
-            }
-
             ObjectMapper mapper = new ObjectMapper();
 
-         // 🔥 KEY FIXES (ONLY THESE)
-         mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
-         mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true);
+            mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
+            mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true);
 
-         AIResponse parsed = mapper.readValue(aiText, AIResponse.class);
-         return parsed;
+            return mapper.readValue(aiText, AIResponse.class);
 
         } catch (Exception e) {
-            System.out.println("⚠️ JSON parsing failed: " + e.getMessage());
-            e.printStackTrace();
-
-            AIResponse fallback = new AIResponse();
-            fallback.setFinalSummary("AI parsing failed. Raw response:\n" + aiText);
-            fallback.setScore(5);
-            return fallback;
+            System.out.println("❌ JSON PARSE FAILED: " + e.getMessage());
+            return fallback("AI parsing failed.");
         }
+    }
+
+    // 🔥 FALLBACK METHOD
+    private AIResponse fallback(String message) {
+        AIResponse fallback = new AIResponse();
+        fallback.setScore(5);
+        fallback.setFinalSummary(message);
+        fallback.setMotivation("Keep going! Stay consistent 💪");
+        return fallback;
     }
 }
