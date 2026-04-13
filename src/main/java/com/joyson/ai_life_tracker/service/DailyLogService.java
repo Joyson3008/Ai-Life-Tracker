@@ -24,17 +24,16 @@ public class DailyLogService {
     @Autowired
     private UserRepository userRepository;
 
-    // 🔥 SAVE LOG WITH HYBRID SCORING
+    // 🔥 SAVE LOG (FINAL SAFE VERSION)
     public DailyLog saveLog(Long userId, DailyLog log) {
 
         // ✅ Step 1: Fetch user
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ✅ Step 2: Set user
         log.setUser(user);
 
-        // 🔥 Step 3: Prepare text for AI
+        // 🔥 Step 2: Prepare text for AI
         String text =
                 "Bible Reading: " + log.getBibleReading() + "\n" +
                 "Book Reading: " + log.getBookReading() + "\n" +
@@ -46,37 +45,53 @@ public class DailyLogService {
                 "Movie: " + log.getMovie() + "\n" +
                 "Phone Usage: " + log.getPhoneUsage();
 
-        // 🔥 Step 4: AI call
-        AIResponse aiResponse = aiService.analyzeText(text);
+        AIResponse aiResponse = null;
 
-        // 🔥 Step 5: HYBRID SCORING
-        int aiScore = aiResponse.getScore();
+        // 🔥 Step 3: Safe AI call (prevents 500 crash)
+        try {
+            aiResponse = aiService.analyzeText(text);
+        } catch (Exception e) {
+            System.out.println("AI ERROR: " + e.getMessage());
+        }
+
+        // 🔥 Step 4: Safe scoring
+        int aiScore = 5; // default fallback
+        if (aiResponse != null) {
+            aiScore = aiResponse.getScore();
+        }
+
         int systemScore = calculateScore(log);
-
         int finalScore = (aiScore + systemScore) / 2;
+
         log.setScore(finalScore);
 
-        // 🔥 Step 6: Map AI → Entity
-        log.setBibleReview(aiResponse.getBibleReview());
-        log.setBookReview(aiResponse.getBookReview());
-        log.setCodingReview(aiResponse.getCodingReview());
-        log.setCsTopicReview(aiResponse.getCsTopicReview());
-        log.setCollegeReview(aiResponse.getCollegeReview());
-        log.setDiaryReview(aiResponse.getDiaryReview());
+        // 🔥 Step 5: Map AI response safely
+        if (aiResponse != null) {
+            log.setBibleReview(aiResponse.getBibleReview());
+            log.setBookReview(aiResponse.getBookReview());
+            log.setCodingReview(aiResponse.getCodingReview());
+            log.setCsTopicReview(aiResponse.getCsTopicReview());
+            log.setCollegeReview(aiResponse.getCollegeReview());
+            log.setDiaryReview(aiResponse.getDiaryReview());
+            log.setExpensesReview(aiResponse.getExpensesReview());
+            log.setMovieReview(aiResponse.getMovieReview());
+            log.setPhoneUsageReview(aiResponse.getPhoneUsageReview());
+            log.setFinalSummary(aiResponse.getFinalSummary());
+            log.setMotivation(aiResponse.getMotivation());
+        } else {
+            // ✅ fallback if AI fails
+            log.setFinalSummary("AI service unavailable. Basic score generated.");
+            log.setMotivation("Keep going! Stay consistent 💪");
+        }
 
-        log.setExpensesReview(aiResponse.getExpensesReview());
-        log.setMovieReview(aiResponse.getMovieReview());
-        log.setPhoneUsageReview(aiResponse.getPhoneUsageReview());
-
-        log.setFinalSummary(aiResponse.getFinalSummary());
-        log.setMotivation(aiResponse.getMotivation());
-
+        // ✅ Step 6: Ensure date is always set
         log.setDate(LocalDate.now());
 
-        // 🔥 Step 7: Save
+        // ✅ Step 7: Save to DB
         return dailyLogRepository.save(log);
     }
 
+    // 🔥 SYSTEM SCORE LOGIC
     private int calculateScore(DailyLog log) {
 
         int score = 5; // base score
@@ -86,7 +101,7 @@ public class DailyLogService {
         if (log.getBookReading() != null && !log.getBookReading().isEmpty()) score += 1;
         if (log.getCsTopic() != null && !log.getCsTopic().isEmpty()) score += 1;
 
-        // 💻 Productivity
+        // 💻 Coding
         if (log.getCodingWork() != null && !log.getCodingWork().isEmpty()) score += 2;
 
         // 🎓 College
@@ -95,7 +110,7 @@ public class DailyLogService {
         // 🧠 Reflection
         if (log.getDiary() != null && !log.getDiary().isEmpty()) score += 1;
 
-        // 📱 Phone usage (String → int)
+        // 📱 Phone usage
         if (log.getPhoneUsage() != null && !log.getPhoneUsage().isEmpty()) {
             try {
                 int phoneUsage = Integer.parseInt(log.getPhoneUsage());
@@ -104,35 +119,35 @@ public class DailyLogService {
                 else if (phoneUsage > 100) score -= 1;
 
             } catch (Exception e) {
-                // ignore
+                // ignore invalid input
             }
         }
 
-        // 💰 Expenses (Double → direct use)
+        // 💰 Expenses
         if (log.getExpenses() != null) {
             if (log.getExpenses() > 500) {
                 score -= 1;
             }
         }
 
-        // 🔒 Clamp
+        // 🔒 Clamp score
         if (score > 10) score = 10;
         if (score < 1) score = 1;
 
         return score;
     }
 
-    // ✅ Get all logs
+    // ✅ GET ALL LOGS
     public List<DailyLog> getAllLogs() {
         return dailyLogRepository.findAll();
     }
 
-    // ✅ Get logs by user
+    // ✅ GET LOGS BY USER
     public List<DailyLog> getLogsByUser(Long userId) {
         return dailyLogRepository.findByUserId(userId);
     }
 
-    // ✅ Get log by ID
+    // ✅ GET LOG BY ID
     public DailyLog getLogById(Long id) {
         return dailyLogRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Log not found"));
