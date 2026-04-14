@@ -11,15 +11,14 @@ public class WebConfig {
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
+
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                 @Override
-            public void addCorsMappings(CorsRegistry registry) {
-registry.addMapping("/**")
-        .allowedOriginPatterns("*") // 🔥 FIX
-        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-        .allowedHeaders("*")
-        .allowCredentials(true);
+                registry.addMapping("/**")
+                        .allowedOriginPatterns("*") // ✅ allow all origins
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
             }
         };
     }
