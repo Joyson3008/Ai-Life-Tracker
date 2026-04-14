@@ -21,11 +21,19 @@ public class UserService {
     // ✅ REGISTER
     public User saveUser(User user) {
 
+        // 🔒 Validate password
         if (user.getPassword() == null || user.getPassword().isEmpty()) {
             throw new RuntimeException("Password cannot be empty");
         }
 
+        // 🔥 Prevent duplicate email
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        // 🔐 Encrypt password
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+
         return userRepository.save(user);
     }
 
@@ -34,14 +42,19 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    // ✅ LOGIN
+    // ✅ LOGIN (FIXED)
     public User login(String email, String password) {
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // 🔥 FIX: don't throw exception
+        User user = userRepository.findByEmail(email).orElse(null);
 
+        if (user == null) {
+            return null;
+        }
+
+        // 🔐 Compare encrypted password
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            return null;
         }
 
         return user;
@@ -54,12 +67,12 @@ public class UserService {
 
         if (user == null) return false;
 
-        // check current password
+        // 🔐 check current password
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             return false;
         }
 
-        // set new password (encrypted)
+        // 🔐 set new password (encrypted)
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
