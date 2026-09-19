@@ -22,6 +22,7 @@ public class DailyLog {
     private String codingWork;
     private String movie;
     private String collegeActivity;
+    @Column(columnDefinition = "TEXT")
     private String phoneUsage;
 
     @Column(length = 2000)
