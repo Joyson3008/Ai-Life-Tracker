@@ -146,16 +146,11 @@ public class PhoneUsageController {
             @PathVariable Long userId
     ) {
 
-        Optional<PhoneUsage> usage =
-                phoneUsageService.getTodayUsage(userId);
+        Optional<PhoneUsageResponse> usage =
+                phoneUsageService.getTodayUsageResponse(userId);
 
         return usage
-            .map(today -> ResponseEntity.ok(
-                PhoneUsageResponse.fromEntity(
-                    today,
-                    phoneUsageService.getAppUsageForDate(userId, today.getDate())
-                )
-            ))
+            .map(ResponseEntity::ok)
                 .orElseGet(() ->
                         ResponseEntity.notFound().build()
                 );

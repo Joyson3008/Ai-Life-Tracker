@@ -146,6 +146,20 @@ public class PhoneUsageService {
         );
     }
 
+        @Transactional(readOnly = true)
+        public Optional<PhoneUsageResponse> getTodayUsageResponse(Long userId) {
+        User user = getUser(userId);
+        Optional<PhoneUsage> usage = phoneUsageRepository.findByUserAndDate(user, LocalDate.now());
+
+        return usage.map(today -> PhoneUsageResponse.fromEntity(
+            today,
+            phoneAppUsageRepository.findByPhoneUsage_User_IdAndPhoneUsage_DateOrderByMinutesDesc(
+                userId,
+                today.getDate()
+            )
+        ));
+        }
+
     @Transactional(readOnly = true)
     public Optional<PhoneUsage> getUsageByDate(
             Long userId,
