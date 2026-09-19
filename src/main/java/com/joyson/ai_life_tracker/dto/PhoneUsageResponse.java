@@ -2,6 +2,7 @@ package com.joyson.ai_life_tracker.dto;
 
 import com.joyson.ai_life_tracker.entity.PhoneAppUsage;
 import com.joyson.ai_life_tracker.entity.PhoneUsage;
+import org.hibernate.Hibernate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,7 +41,7 @@ public class PhoneUsageResponse {
 
         PhoneUsageResponse response = new PhoneUsageResponse();
         response.setId(entity.getId());
-        if (entity.getUser() != null) {
+        if (Hibernate.isInitialized(entity.getUser()) && entity.getUser() != null) {
             response.setUserId(entity.getUser().getId());
         }
         response.setDate(entity.getDate());
