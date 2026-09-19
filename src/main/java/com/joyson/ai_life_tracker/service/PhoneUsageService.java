@@ -148,8 +148,13 @@ public class PhoneUsageService {
 
         @Transactional(readOnly = true)
         public Optional<PhoneUsageResponse> getTodayUsageResponse(Long userId) {
+            return getUsageResponse(userId, LocalDate.now());
+        }
+
+        @Transactional(readOnly = true)
+        public Optional<PhoneUsageResponse> getUsageResponse(Long userId, LocalDate date) {
         User user = getUser(userId);
-        Optional<PhoneUsage> usage = phoneUsageRepository.findByUserAndDate(user, LocalDate.now());
+            Optional<PhoneUsage> usage = phoneUsageRepository.findByUserAndDate(user, date);
 
         return usage.map(today -> PhoneUsageResponse.fromEntity(
             today,

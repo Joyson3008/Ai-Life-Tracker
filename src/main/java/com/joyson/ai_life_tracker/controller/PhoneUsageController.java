@@ -143,11 +143,13 @@ public class PhoneUsageController {
      */
     @GetMapping("/{userId}/today")
         public ResponseEntity<?> getTodayUsage(
-            @PathVariable Long userId
+            @PathVariable Long userId,
+            @RequestParam(required = false) LocalDate date
     ) {
 
-        Optional<PhoneUsageResponse> usage =
-                phoneUsageService.getTodayUsageResponse(userId);
+        Optional<PhoneUsageResponse> usage = date == null
+                ? phoneUsageService.getTodayUsageResponse(userId)
+                : phoneUsageService.getUsageResponse(userId, date);
 
         return usage
             .map(ResponseEntity::ok)
