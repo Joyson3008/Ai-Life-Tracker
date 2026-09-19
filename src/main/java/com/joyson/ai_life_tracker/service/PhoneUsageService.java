@@ -230,15 +230,8 @@ public class PhoneUsageService {
     ) {
         validateDate(date);
 
-        Optional<PhoneUsage> phoneUsage = phoneUsageRepository
-                .findByUserAndDate(getUser(userId), date);
-
-        if (phoneUsage.isEmpty()) {
-            return List.of();
-        }
-
         return phoneAppUsageRepository
-                .findByPhoneUsageOrderByMinutesDesc(phoneUsage.get());
+            .findByPhoneUsage_User_IdAndPhoneUsage_DateOrderByMinutesDesc(userId, date);
     }
 
     @Transactional(readOnly = true)
