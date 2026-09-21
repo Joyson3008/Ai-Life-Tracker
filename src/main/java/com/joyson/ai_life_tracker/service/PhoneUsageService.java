@@ -70,6 +70,7 @@ public class PhoneUsageService {
         }
 
         List<AppUsageData> apps = request.getApps() == null ? List.of() : request.getApps();
+        phoneAppUsageRepository.deleteByPhoneUsage(phoneUsage);
         for (AppUsageData appUsageData : apps) {
             if (appUsageData == null) {
                 continue;

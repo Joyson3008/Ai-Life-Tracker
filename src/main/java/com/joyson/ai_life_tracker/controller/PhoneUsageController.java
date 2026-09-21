@@ -114,18 +114,19 @@ public class PhoneUsageController {
                 return ResponseEntity.status(401).body(Map.of("error", "Unauthorized device for this user."));
             }
 
+            PhoneUsageResponse response = phoneUsageService.syncPhoneUsage(userId, request);
             mobileDeviceService.updateSyncStatus(
                     phoneUsageService.getUserById(userId),
                     deviceId,
                     "SUCCESS",
                     null
             );
-
-            PhoneUsageResponse response = phoneUsageService.syncPhoneUsage(userId, request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
+            mobileDeviceService.updateSyncStatusSafely(userId, deviceId, "FAILED", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
+            mobileDeviceService.updateSyncStatusSafely(userId, deviceId, "FAILED", "Phone usage sync failed");
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "Phone usage sync failed"));
         }

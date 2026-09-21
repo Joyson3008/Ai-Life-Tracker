@@ -47,7 +47,7 @@ public class DailyLearningService {
     }
 
     private DailyLearning repair(DailyLearning learning) {
-        DailyLearningContent content = aiService.generateDailyLearning();
+        DailyLearningContent content = aiService.generateDailyLearning(LocalDate.now());
         learning.getVocabulary().clear();
         addWords(learning, "HINDI", content.getHindiWords(), content.getHindiWord(), content.getHindiMeaning(), content.getHindiExample());
         addWords(learning, "TELUGU", content.getTeluguWords(), content.getTeluguWord(), content.getTeluguMeaning(), content.getTeluguExample());
@@ -76,7 +76,7 @@ public class DailyLearningService {
             throw new IllegalArgumentException("Unsupported language: " + language);
         }
 
-        DailyLearningContent content = aiService.generateDailyLearning();
+        DailyLearningContent content = aiService.generateDailyLearning(LocalDate.now());
         learning.getVocabulary().removeIf(word -> normalized.equals(word.getLanguage()));
         switch (normalized) {
             case "HINDI" -> addWords(learning, normalized, content.getHindiWords(), content.getHindiWord(), content.getHindiMeaning(), content.getHindiExample());
@@ -91,7 +91,7 @@ public class DailyLearningService {
     private DailyLearning generate(Long userId, LocalDate date) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
-        DailyLearningContent content = aiService.generateDailyLearning();
+        DailyLearningContent content = aiService.generateDailyLearning(date);
 
         DailyLearning learning = new DailyLearning();
         learning.setUser(user);

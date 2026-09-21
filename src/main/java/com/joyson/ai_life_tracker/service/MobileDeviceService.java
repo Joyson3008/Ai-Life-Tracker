@@ -116,6 +116,14 @@ public class MobileDeviceService {
         mobileSyncStatusRepository.save(syncStatus);
     }
 
+    @Transactional
+    public void updateSyncStatusSafely(Long userId, String deviceId, String status, String errorMessage) {
+        if (userId == null || deviceId == null || deviceId.isBlank()) {
+            return;
+        }
+        userRepository.findById(userId).ifPresent(user -> updateSyncStatus(user, deviceId, status, errorMessage));
+    }
+
     @Transactional(readOnly = true)
     public Optional<MobileSyncStatus> getSyncStatus(Long userId, String deviceId) {
         User user = userRepository.findById(userId)

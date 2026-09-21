@@ -11,6 +11,7 @@ import com.joyson.ai_life_tracker.dto.AIResponse;
 import com.joyson.ai_life_tracker.dto.DailyLearningContent;
 
 import java.util.*;
+import java.time.LocalDate;
 
 @Service
 public class AIService {
@@ -162,7 +163,12 @@ public class AIService {
     }
 
     public DailyLearningContent generateDailyLearning() {
+        return generateDailyLearning(LocalDate.now());
+    }
+
+    public DailyLearningContent generateDailyLearning(LocalDate date) {
         String prompt = "Generate today's beginner learning pack. Return ONLY valid JSON, no markdown. " +
+                "This pack is for date " + date + ". Do not reuse words from another date. " +
                 "Choose one new practical computer-science topic and exactly five different English vocabulary words. " +
                 "For Hindi, Telugu, and Malayalam provide exactly five beginner spoken words, written ONLY with Roman/English letters. NEVER use Devanagari, Telugu, Malayalam, or any native script. " +
                 "For every word provide an English meaning, Tamil meaning in Tamil script, an English example, a Tamil example in Tamil script, and a natural example in the target language written in Roman letters. " +
@@ -202,7 +208,7 @@ public class AIService {
                 } catch (HttpStatusCodeException e) {
                 System.err.println("[AIService] Daily learning Groq HTTP " + e.getStatusCode().value()
                     + ": " + e.getResponseBodyAsString());
-                return fallbackDailyLearning();
+                return fallbackDailyLearning(date);
                 }
             Map responseBody = response.getBody();
             List choices = responseBody == null ? List.of() : (List) responseBody.get("choices");
@@ -215,12 +221,12 @@ public class AIService {
             return normalizeDailyLearning(result);
         } catch (Exception e) {
             System.err.println("[AIService] Daily learning generation failed: " + e.getMessage());
-            return fallbackDailyLearning();
+            return fallbackDailyLearning(date);
         }
     }
 
     private DailyLearningContent normalizeDailyLearning(DailyLearningContent content) {
-        if (content == null) return fallbackDailyLearning();
+        if (content == null) return fallbackDailyLearning(LocalDate.now());
         content.setHindiWords(validWords(content.getHindiWords(), hindiFallback()));
         content.setTeluguWords(validWords(content.getTeluguWords(), teluguFallback()));
         content.setMalayalamWords(validWords(content.getMalayalamWords(), malayalamFallback()));
@@ -309,7 +315,7 @@ public class AIService {
         });
     }
 
-    private DailyLearningContent fallbackDailyLearning() {
+    private DailyLearningContent fallbackDailyLearning(LocalDate date) {
         DailyLearningContent content = new DailyLearningContent();
         content.setCsTopic("HTTP and REST APIs");
         content.setCsExplanation("A REST API lets applications communicate using HTTP requests and responses.");
@@ -329,7 +335,17 @@ public class AIService {
                 {"clarify", "to make something easier to understand", "Please clarify the question."},
                 {"reliable", "consistently dependable", "This backup is reliable."},
                 {"observe", "to watch carefully", "Observe how the program behaves."},
-                {"progress", "forward movement or improvement", "Small steps create progress."}
+            {"progress", "forward movement or improvement", "Small steps create progress."},
+            {"explore", "to investigate or learn about", "Explore the new feature."},
+            {"improve", "to make something better", "We improve with practice."},
+            {"patient", "able to wait calmly", "Be patient while the app loads."},
+            {"reflect", "to think carefully about something", "Reflect on the result."},
+            {"adjust", "to change slightly for a better result", "Adjust the setting slowly."},
+            {"balance", "a steady relationship between parts", "Balance work and rest."},
+            {"focus", "to give attention to something", "Focus on one task."},
+            {"notice", "to become aware of something", "Notice the small difference."},
+            {"prepare", "to get ready", "Prepare the data first."},
+            {"review", "to examine again", "Review the code before sharing."}
         };
         for (String[] value : values) {
             DailyLearningContent.VocabularyItem item = new DailyLearningContent.VocabularyItem();
@@ -341,7 +357,12 @@ public class AIService {
             item.setExampleRoman(value[2]);
             words.add(item);
         }
-        content.setVocabulary(words);
+        int start = Math.floorMod(date.getDayOfYear() - 1, words.size());
+        List<DailyLearningContent.VocabularyItem> dailyWords = new ArrayList<>();
+        for (int index = 0; index < 5; index++) {
+            dailyWords.add(words.get((start + index) % words.size()));
+        }
+        content.setVocabulary(dailyWords);
         content.setHindiWords(hindiFallback());
         content.setTeluguWords(teluguFallback());
         content.setMalayalamWords(malayalamFallback());
