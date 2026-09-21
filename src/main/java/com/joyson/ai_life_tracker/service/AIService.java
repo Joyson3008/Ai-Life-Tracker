@@ -192,7 +192,7 @@ public class AIService {
             Map<String, Object> body = new HashMap<>();
             body.put("model", MODEL);
             body.put("temperature", 0.7);
-            body.put("max_tokens", 1200);
+            body.put("max_tokens", 2400);
             body.put("messages", List.of(
                     Map.of("role", "system", "content", "You return JSON only."),
                     Map.of("role", "user", "content", prompt)
@@ -218,19 +218,19 @@ public class AIService {
             content = content.replace("```json", "").replace("```", "").trim();
 
             DailyLearningContent result = new ObjectMapper().readValue(content, DailyLearningContent.class);
-            return normalizeDailyLearning(result);
+            return normalizeDailyLearning(result, date);
         } catch (Exception e) {
             System.err.println("[AIService] Daily learning generation failed: " + e.getMessage());
             return fallbackDailyLearning(date);
         }
     }
 
-    private DailyLearningContent normalizeDailyLearning(DailyLearningContent content) {
-        if (content == null) return fallbackDailyLearning(LocalDate.now());
-        content.setHindiWords(validWords(content.getHindiWords(), hindiFallback()));
-        content.setTeluguWords(validWords(content.getTeluguWords(), teluguFallback()));
-        content.setMalayalamWords(validWords(content.getMalayalamWords(), malayalamFallback()));
-        content.setVocabulary(validWords(content.getVocabulary(), englishFallback()));
+    private DailyLearningContent normalizeDailyLearning(DailyLearningContent content, LocalDate date) {
+        if (content == null) return fallbackDailyLearning(date);
+        content.setHindiWords(validWords(content.getHindiWords(), hindiFallback(date)));
+        content.setTeluguWords(validWords(content.getTeluguWords(), teluguFallback(date)));
+        content.setMalayalamWords(validWords(content.getMalayalamWords(), malayalamFallback(date)));
+        content.setVocabulary(validWords(content.getVocabulary(), englishFallback(date)));
         return content;
     }
 
@@ -275,38 +275,53 @@ public class AIService {
         return words;
     }
 
-    private List<DailyLearningContent.VocabularyItem> hindiFallback() {
-        return romanWords(new String[][] {
+    private List<DailyLearningContent.VocabularyItem> hindiFallback(LocalDate date) {
+        return dailyFallback(date, new String[][] {
                 {"kya", "what", "என்ன", "What is this?", "இது என்ன?", "Yeh kya hai?"},
                 {"haan", "yes", "ஆம்", "Yes, I understand.", "ஆம், எனக்கு புரிகிறது.", "Haan, mujhe samajh aaya."},
                 {"nahin", "no", "இல்லை", "No, thank you.", "இல்லை, நன்றி.", "Nahin, dhanyavaad."},
                 {"paani", "water", "தண்ணீர்", "Please give me water.", "தயவுசெய்து எனக்கு தண்ணீர் கொடுங்கள்.", "Mujhe paani dijiye."},
-                {"aaj", "today", "இன்று", "Today is a good day.", "இன்று நல்ல நாள்.", "Aaj achha din hai."}
+                {"aaj", "today", "இன்று", "Today is a good day.", "இன்று நல்ல நாள்.", "Aaj achha din hai."},
+                {"kal", "tomorrow", "நாளை", "I will come tomorrow.", "நான் நாளை வருவேன்.", "Main kal aaunga."},
+                {"ghar", "home", "வீடு", "I am going home.", "நான் வீட்டிற்கு செல்கிறேன்.", "Main ghar ja raha hoon."},
+                {"dost", "friend", "நண்பர்", "My friend is here.", "என் நண்பர் இங்கே இருக்கிறார்.", "Mera dost yahan hai."},
+                {"achha", "good", "நல்ல", "This is good.", "இது நல்லது.", "Yeh achha hai."},
+                {"rukna", "to wait", "காத்திருக்க", "Please wait here.", "தயவுசெய்து இங்கே காத்திருங்கள்.", "Yahan rukna."}
         });
     }
 
-    private List<DailyLearningContent.VocabularyItem> teluguFallback() {
-        return romanWords(new String[][] {
+    private List<DailyLearningContent.VocabularyItem> teluguFallback(LocalDate date) {
+        return dailyFallback(date, new String[][] {
                 {"emi", "what", "என்ன", "What is this?", "இது என்ன?", "Idi emi?"},
                 {"avunu", "yes", "ஆம்", "Yes, I understand.", "ஆம், எனக்கு புரிகிறது.", "Avunu, naaku artham ayyindi."},
                 {"kaadu", "no", "இல்லை", "No, thank you.", "இல்லை, நன்றி.", "Kaadu, dhanyavaadalu."},
                 {"neellu", "water", "தண்ணீர்", "Please give me water.", "தயவுசெய்து எனக்கு தண்ணீர் கொடுங்கள்.", "Naaku neellu ivvandi."},
-                {"ee roju", "today", "இன்று", "Today is a good day.", "இன்று நல்ல நாள்.", "Ee roju manchi roju."}
+                {"ee roju", "today", "இன்று", "Today is a good day.", "இன்று நல்ல நாள்.", "Ee roju manchi roju."},
+                {"repu", "tomorrow", "நாளை", "I will come tomorrow.", "நான் நாளை வருவேன்.", "Nenu repu vastaanu."},
+                {"illu", "home", "வீடு", "I am going home.", "நான் வீட்டிற்கு செல்கிறேன்.", "Nenu intiki velthunnanu."},
+                {"snehitudu", "friend", "நண்பர்", "My friend is here.", "என் நண்பர் இங்கே இருக்கிறார்.", "Naa snehitudu ikkada unnadu."},
+                {"manchi", "good", "நல்ல", "This is good.", "இது நல்லது.", "Idi manchi vishayam."},
+                {"aagandi", "please wait", "காத்திருங்கள்", "Please wait here.", "தயவுசெய்து இங்கே காத்திருங்கள்.", "Ikkada aagandi."}
         });
     }
 
-    private List<DailyLearningContent.VocabularyItem> malayalamFallback() {
-        return romanWords(new String[][] {
+    private List<DailyLearningContent.VocabularyItem> malayalamFallback(LocalDate date) {
+        return dailyFallback(date, new String[][] {
                 {"entha", "what", "என்ன", "What is this?", "இது என்ன?", "Ithu entha?"},
                 {"athe", "yes", "ஆம்", "Yes, I understand.", "ஆம், எனக்கு புரிகிறது.", "Athe, enikku manassilaayi."},
                 {"illa", "no", "இல்லை", "No, thank you.", "இல்லை, நன்றி.", "Illa, nandi."},
                 {"vellam", "water", "தண்ணீர்", "Please give me water.", "தயவுசெய்து எனக்கு தண்ணீர் கொடுங்கள்.", "Enikku vellam tharumo?"},
-                {"innu", "today", "இன்று", "Today is a good day.", "இன்று நல்ல நாள்.", "Innu nalla divasam aanu."}
+                {"innu", "today", "இன்று", "Today is a good day.", "இன்று நல்ல நாள்.", "Innu nalla divasam aanu."},
+                {"nale", "tomorrow", "நாளை", "I will come tomorrow.", "நான் நாளை வருவேன்.", "Njaan nale varum."},
+                {"veedu", "home", "வீடு", "I am going home.", "நான் வீட்டிற்கு செல்கிறேன்.", "Njaan veetilekku pokunnu."},
+                {"suhruthu", "friend", "நண்பர்", "My friend is here.", "என் நண்பர் இங்கே இருக்கிறார்.", "Ente suhruthu ivide undu."},
+                {"nallathu", "good", "நல்ல", "This is good.", "இது நல்லது.", "Ithu nallathanu."},
+                {"kaathirikku", "please wait", "காத்திருங்கள்", "Please wait here.", "தயவுசெய்து இங்கே காத்திருங்கள்.", "Ivide kaathirikku."}
         });
     }
 
-    private List<DailyLearningContent.VocabularyItem> englishFallback() {
-        return romanWords(new String[][] {
+    private List<DailyLearningContent.VocabularyItem> englishFallback(LocalDate date) {
+        return dailyFallback(date, new String[][] {
                 {"ask", "to request information", "கேட்க", "I want to ask a question.", "நான் ஒரு கேள்வி கேட்க விரும்புகிறேன்.", "I want to ask a question."},
                 {"answer", "a reply to a question", "பதில்", "Please answer me.", "தயவுசெய்து எனக்கு பதில் சொல்லுங்கள்.", "Please answer me."},
                 {"help", "to make something easier for someone", "உதவி", "Can you help me?", "நீங்கள் எனக்கு உதவ முடியுமா?", "Can you help me?"},
@@ -363,10 +378,23 @@ public class AIService {
             dailyWords.add(words.get((start + index) % words.size()));
         }
         content.setVocabulary(dailyWords);
-        content.setHindiWords(hindiFallback());
-        content.setTeluguWords(teluguFallback());
-        content.setMalayalamWords(malayalamFallback());
+        content.setHindiWords(hindiFallback(date));
+        content.setTeluguWords(teluguFallback(date));
+        content.setMalayalamWords(malayalamFallback(date));
         return content;
+    }
+
+    private List<DailyLearningContent.VocabularyItem> dailyFallback(
+            LocalDate date,
+            String[][] values
+    ) {
+        List<DailyLearningContent.VocabularyItem> words = romanWords(values);
+        int start = Math.floorMod(date.getDayOfYear() - 1, words.size());
+        List<DailyLearningContent.VocabularyItem> result = new ArrayList<>();
+        for (int index = 0; index < 5; index++) {
+            result.add(words.get((start + index) % words.size()));
+        }
+        return result;
     }
 
     // 🔥 FALLBACK METHOD

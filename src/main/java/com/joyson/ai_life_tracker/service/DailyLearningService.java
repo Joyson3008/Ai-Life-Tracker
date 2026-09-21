@@ -40,14 +40,45 @@ public class DailyLearningService {
         if (!hasValidRomanWords(existing, "HINDI")
                 || !hasValidRomanWords(existing, "TELUGU")
                 || !hasValidRomanWords(existing, "MALAYALAM")
-                || !hasValidRomanWords(existing, "ENGLISH")) {
+                || !hasValidRomanWords(existing, "ENGLISH")
+                || hasLegacyFallbackWords(existing)
+                || existing.getCsTopic() == null || existing.getCsTopic().isBlank()
+                || existing.getCsExplanation() == null || existing.getCsExplanation().isBlank()
+                || existing.getCsExample() == null || existing.getCsExample().isBlank()) {
             return repair(existing);
         }
         return existing;
     }
 
+    private boolean hasLegacyFallbackWords(DailyLearning learning) {
+        return hasWords(learning, "HINDI", List.of("kya", "haan", "nahin", "paani", "aaj"))
+                || hasWords(learning, "TELUGU", List.of("emi", "avunu", "kaadu", "neellu", "ee roju"))
+                || hasWords(learning, "MALAYALAM", List.of("entha", "athe", "illa", "vellam", "innu"))
+                || hasWords(learning, "ENGLISH", List.of("ask", "answer", "help", "ready", "understand"));
+    }
+
+    private boolean hasWords(DailyLearning learning, String language, List<String> expected) {
+        List<String> actual = learning.getVocabulary().stream()
+                .filter(item -> language.equals(item.getLanguage()))
+                .map(item -> item.getWord().trim().toLowerCase(Locale.ROOT))
+                .toList();
+        return actual.equals(expected);
+    }
+
     private DailyLearning repair(DailyLearning learning) {
         DailyLearningContent content = aiService.generateDailyLearning(LocalDate.now());
+        learning.setCsTopic(required(content.getCsTopic(), "Daily CS topic unavailable"));
+        learning.setCsExplanation(required(content.getCsExplanation(), "Study the topic and connect it to a small project."));
+        learning.setCsExample(required(content.getCsExample(), "Build a small example to reinforce the idea."));
+        learning.setHindiWord(required(content.getHindiWord(), "seekhna"));
+        learning.setHindiMeaning(required(content.getHindiMeaning(), "learn"));
+        learning.setHindiExample(required(content.getHindiExample(), "I learn every day."));
+        learning.setTeluguWord(required(content.getTeluguWord(), "nerchukovadam"));
+        learning.setTeluguMeaning(required(content.getTeluguMeaning(), "learn"));
+        learning.setTeluguExample(required(content.getTeluguExample(), "I learn every day."));
+        learning.setMalayalamWord(required(content.getMalayalamWord(), "padikkuka"));
+        learning.setMalayalamMeaning(required(content.getMalayalamMeaning(), "learn"));
+        learning.setMalayalamExample(required(content.getMalayalamExample(), "I learn every day."));
         learning.getVocabulary().clear();
         addWords(learning, "HINDI", content.getHindiWords(), content.getHindiWord(), content.getHindiMeaning(), content.getHindiExample());
         addWords(learning, "TELUGU", content.getTeluguWords(), content.getTeluguWord(), content.getTeluguMeaning(), content.getTeluguExample());
